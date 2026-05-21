@@ -64,7 +64,9 @@ async def generate_tts(
         output_path = Path(tmp.name)
         tmp.close()
 
-    communicate = edge_tts.Communicate(text, voice, rate=rate, volume=volume)
+    communicate = edge_tts.Communicate(
+        text, voice, rate=rate, volume=volume, boundary="WordBoundary"
+    )
 
     word_timings: list[WordTiming] = []
     max_end_ms: float = 0

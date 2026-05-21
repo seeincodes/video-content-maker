@@ -54,7 +54,7 @@ Examples:
         "--rate", "-r",
         type=str,
         default=DEFAULT_RATE,
-        help=f"Speech rate adjustment (default: {DEFAULT_RATE}).",
+        help="Speech rate adjustment (default: %(default)s).",
     )
     parser.add_argument(
         "--background", "-b",

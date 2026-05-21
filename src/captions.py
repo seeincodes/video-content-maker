@@ -131,7 +131,9 @@ def render_caption_frame(
     y = int(height * y_position)
     word_texts = [w.word.upper() for w in group.words]
 
-    # Measure total width
+    max_text_width = width * 0.9  # 90% of frame width as max
+
+    # Measure total width and scale down if needed
     space_width = draw.textlength(" ", font=font)
     total_width = 0
     word_widths = []
@@ -141,6 +143,36 @@ def render_caption_frame(
         word_widths.append(w)
         total_width += w
     total_width += space_width * (len(word_texts) - 1)
+
+    # Auto-scale fonts if text overflows
+    if total_width > max_text_width:
+        scale = max_text_width / total_width
+        scaled_font_size = max(24, int(font_size * scale))
+        scaled_highlight_size = max(28, int(highlight_font_size * scale))
+        try:
+            font = (
+                ImageFont.truetype(font_path, scaled_font_size)
+                if font_path
+                else ImageFont.load_default()
+            )
+            highlight_font = (
+                ImageFont.truetype(font_path, scaled_highlight_size)
+                if font_path
+                else ImageFont.load_default()
+            )
+        except (OSError, IOError):
+            pass
+
+        # Recalculate widths with scaled fonts
+        space_width = draw.textlength(" ", font=font)
+        total_width = 0
+        word_widths = []
+        for i, wt in enumerate(word_texts):
+            use_font = highlight_font if i == active_word_idx else font
+            w = draw.textlength(wt, font=use_font)
+            word_widths.append(w)
+            total_width += w
+        total_width += space_width * (len(word_texts) - 1)
 
     x = (width - total_width) / 2
 
@@ -212,7 +244,7 @@ def create_caption_clips(
             return make_mask
 
         clip = VideoClip(make_frame_func(group, font_path), duration=duration)
-        mask = VideoClip(make_mask_func(group, font_path), ismask=True, duration=duration)
+        mask = VideoClip(make_mask_func(group, font_path), is_mask=True, duration=duration)
         clip = clip.with_mask(mask).with_start(group.start_s).with_position((0, 0))
         clips.append(clip)
 

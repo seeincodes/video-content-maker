@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Generated output
+output/*.mp4
+output/*.avi
+output/*.mkv
+
+# Background videos (user-provided, potentially large)
+assets/backgrounds/*.mp4
+assets/backgrounds/*.mov
+assets/backgrounds/*.avi
+assets/backgrounds/*.mkv
+assets/backgrounds/*.webm
+
+# Temp files
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Streamlit
+.streamlit/
+
+# Env
+.env

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brainrot-generator"
+version = "0.1.0"
+description = "Turn any text into informative brainrot-style short-form videos"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "edge-tts>=6.1.0",
+    "moviepy>=1.0.3",
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "pysrt>=1.1.2",
+]
+
+[project.optional-dependencies]
+web = [
+    "streamlit>=1.30.0",
+]
+dev = [
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+brainrot = "src.cli:main"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]

@@ -275,10 +275,11 @@ def _generate_neon_city(
     b_x = sorted(rng.randint(0, width, n_buildings))
     b_widths = rng.randint(30, 90, n_buildings)
     b_heights = rng.randint(int(height * 0.2), int(height * 0.65), n_buildings)
-    b_colors = rng.choice(
-        [[255, 0, 100], [0, 200, 255], [255, 0, 255], [0, 255, 150], [255, 100, 0]],
-        size=n_buildings,
-    )
+    _color_options = np.array([
+        [255, 0, 100], [0, 200, 255], [255, 0, 255],
+        [0, 255, 150], [255, 100, 0],
+    ])
+    b_colors = _color_options[rng.randint(0, len(_color_options), n_buildings)]
     n_windows_per = rng.randint(3, 8, n_buildings)
 
     y_ratios = np.linspace(0, 1, height).reshape(-1, 1)

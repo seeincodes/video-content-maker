@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from src.backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
 from src.config import VideoConfig
 from src.video import generate_video
 
@@ -55,11 +56,24 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown("### Background Video")
+    st.markdown("### Background")
+
+    bg_style = st.selectbox(
+        "Background Style",
+        options=list(BACKGROUND_STYLES.keys()),
+        index=list(BACKGROUND_STYLES.keys()).index(DEFAULT_BACKGROUND_STYLE),
+        format_func=lambda k: f"{k.replace('_', ' ').title()} — {BACKGROUND_STYLES[k]}",
+        help="Choose a procedural background style for your video.",
+    )
+
+    st.markdown("**— OR —**")
     bg_file = st.file_uploader(
-        "Upload gameplay / background clip (optional)",
+        "Upload your own background clip",
         type=["mp4", "mov", "avi", "mkv", "webm"],
-        help="Upload Subway Surfer, Minecraft parkour, or any gameplay clip.",
+        help=(
+            "Upload Subway Surfer, Minecraft parkour, or any gameplay clip."
+            " Overrides the style above."
+        ),
     )
 
 # --- Main content ---
@@ -93,6 +107,7 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             voice=voice,
             rate=rate,
             background_video=bg_path,
+            background_style=bg_style,
             words_per_group=words_per_group,
         )
 

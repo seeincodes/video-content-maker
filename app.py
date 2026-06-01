@@ -58,23 +58,43 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Background")
 
-    bg_style = st.selectbox(
-        "Background Style",
-        options=list(BACKGROUND_STYLES.keys()),
-        index=list(BACKGROUND_STYLES.keys()).index(DEFAULT_BACKGROUND_STYLE),
-        format_func=lambda k: f"{k.replace('_', ' ').title()} — {BACKGROUND_STYLES[k]}",
-        help="Choose a procedural background style for your video.",
+    bg_mode = st.radio(
+        "Background Mode",
+        options=["stock_footage", "procedural", "custom_upload"],
+        format_func=lambda x: {
+            "stock_footage": "📸 Stock Footage (matches your text)",
+            "procedural": "🎨 Procedural Animation",
+            "custom_upload": "📁 Upload Custom Video",
+        }[x],
+        index=0,
+        help="Choose how the background visuals are generated.",
     )
 
-    st.markdown("**— OR —**")
-    bg_file = st.file_uploader(
-        "Upload your own background clip",
-        type=["mp4", "mov", "avi", "mkv", "webm"],
-        help=(
-            "Upload Subway Surfer, Minecraft parkour, or any gameplay clip."
-            " Overrides the style above."
-        ),
-    )
+    bg_style = DEFAULT_BACKGROUND_STYLE
+    bg_file = None
+
+    if bg_mode == "procedural":
+        bg_style = st.selectbox(
+            "Background Style",
+            options=list(BACKGROUND_STYLES.keys()),
+            index=list(BACKGROUND_STYLES.keys()).index(DEFAULT_BACKGROUND_STYLE),
+            format_func=lambda k: f"{k.replace('_', ' ').title()} — {BACKGROUND_STYLES[k]}",
+            help="Choose a procedural background style for your video.",
+        )
+    elif bg_mode == "custom_upload":
+        bg_file = st.file_uploader(
+            "Upload your own background clip",
+            type=["mp4", "mov", "avi", "mkv", "webm"],
+            help=(
+                "Upload Subway Surfer, Minecraft parkour, or any gameplay clip."
+            ),
+        )
+    else:
+        st.info(
+            "🔍 Stock footage will be fetched from Pexels based on your text content. "
+            "Images will have a Ken Burns zoom/pan effect. "
+            "Requires PEXELS_API_KEY environment variable."
+        )
 
 # --- Main content ---
 text = st.text_area(
@@ -108,6 +128,7 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             rate=rate,
             background_video=bg_path,
             background_style=bg_style,
+            use_stock_footage=(bg_mode == "stock_footage"),
             words_per_group=words_per_group,
         )
 
@@ -115,7 +136,11 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             progress = st.progress(0, text="Generating TTS audio...")
 
             try:
-                progress.progress(20, text="Generating TTS audio...")
+                if config.use_stock_footage:
+                    progress.progress(10, text="Generating TTS audio...")
+                else:
+                    progress.progress(20, text="Generating TTS audio...")
+
                 output_path = generate_video(config)
                 progress.progress(100, text="Done!")
 
@@ -141,7 +166,7 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: #888; font-size: 0.8em;'>"
-    "Built with edge-tts, moviepy, and Streamlit"
+    "Built with edge-tts, moviepy, Pexels, and Streamlit"
     "</div>",
     unsafe_allow_html=True,
 )

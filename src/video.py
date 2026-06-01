@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from pathlib import Path
 
@@ -12,13 +13,15 @@ from .captions import create_caption_clips
 from .config import OUTPUT_DIR, VideoConfig
 from .tts import run_tts
 
+logger = logging.getLogger(__name__)
+
 
 def generate_video(config: VideoConfig) -> Path:
     """Generate a complete brainrot-style video from text.
 
     Pipeline:
         1. Generate TTS audio with word-level timestamps
-        2. Load or generate background video
+        2. Load or generate background video (stock footage or procedural)
         3. Render animated captions synced to audio
         4. Composite everything into final video
     """
@@ -44,14 +47,42 @@ def generate_video(config: VideoConfig) -> Path:
     audio = AudioFileClip(str(tts_result.audio_path))
     total_duration = audio.duration + 0.5  # Small buffer at end
 
-    background = load_background(
-        path=config.background_video,
-        duration=total_duration,
-        width=config.width,
-        height=config.height,
-        fps=config.fps,
-        style=config.background_style,
-    )
+    background = None
+
+    # Try stock footage if enabled
+    if config.use_stock_footage:
+        from .stock_footage import build_stock_footage_background, get_api_key
+
+        api_key = get_api_key()
+        if api_key:
+            logger.info("Building stock footage background from Pexels...")
+            background = build_stock_footage_background(
+                text=config.text,
+                word_timings=tts_result.word_timings,
+                duration=total_duration,
+                api_key=api_key,
+                width=config.width,
+                height=config.height,
+                fps=config.fps,
+            )
+            if background is None:
+                logger.warning(
+                    "Stock footage fetch returned no results, falling back to procedural"
+                )
+        else:
+            logger.warning(
+                "PEXELS_API_KEY not set, falling back to procedural background"
+            )
+
+    if background is None:
+        background = load_background(
+            path=config.background_video,
+            duration=total_duration,
+            width=config.width,
+            height=config.height,
+            fps=config.fps,
+            style=config.background_style,
+        )
 
     # Step 3: Create caption clips
     caption_clips = create_caption_clips(tts_result.word_timings, config)

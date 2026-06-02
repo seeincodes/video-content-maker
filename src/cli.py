@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
 from .config import DEFAULT_RATE, DEFAULT_VOICE, VideoConfig
 from .video import generate_video
 
@@ -23,8 +24,14 @@ Examples:
   # Customize voice and speed
   brainrot "Hello world" --voice en-US-AriaNeural --rate "+20%"
 
-  # Use a specific background video
+  # Use a specific background style
+  brainrot "Hello world" --background-style matrix
+
+  # Use a custom background video
   brainrot "Hello world" --background gameplay.mp4
+
+  # List available background styles
+  brainrot --list-styles
         """,
     )
 
@@ -63,6 +70,13 @@ Examples:
         help="Path to a background video file (gameplay, etc).",
     )
     parser.add_argument(
+        "--background-style", "-s",
+        type=str,
+        default=DEFAULT_BACKGROUND_STYLE,
+        choices=list(BACKGROUND_STYLES.keys()),
+        help="Procedural background style (default: %(default)s).",
+    )
+    parser.add_argument(
         "--words-per-group", "-w",
         type=int,
         default=4,
@@ -73,11 +87,20 @@ Examples:
         action="store_true",
         help="List available English TTS voices and exit.",
     )
+    parser.add_argument(
+        "--list-styles",
+        action="store_true",
+        help="List available background styles and exit.",
+    )
 
     args = parser.parse_args()
 
     if args.list_voices:
         _list_voices()
+        return
+
+    if args.list_styles:
+        _list_styles()
         return
 
     # Get text from argument or file
@@ -99,6 +122,7 @@ Examples:
         voice=args.voice,
         rate=args.rate,
         background_video=args.background,
+        background_style=args.background_style,
         output_path=args.output,
         words_per_group=args.words_per_group,
     )
@@ -106,6 +130,7 @@ Examples:
     print("🎬 Generating brainrot video...")
     print(f"   Voice: {config.voice}")
     print(f"   Rate: {config.rate}")
+    print(f"   Background: {config.background_style}")
     print(f"   Words per group: {config.words_per_group}")
     print(f"   Text: {text[:80]}{'...' if len(text) > 80 else ''}")
     print()
@@ -126,6 +151,14 @@ def _list_voices():
         gender = v.get("Gender", "?")
         name = v["ShortName"]
         print(f"  {name:<35} ({gender})")
+
+
+def _list_styles():
+    """Print available background styles."""
+    print(f"Available background styles ({len(BACKGROUND_STYLES)} total):\n")
+    for name, description in BACKGROUND_STYLES.items():
+        default = " (default)" if name == DEFAULT_BACKGROUND_STYLE else ""
+        print(f"  {name:<15} {description}{default}")
 
 
 if __name__ == "__main__":

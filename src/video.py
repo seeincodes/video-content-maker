@@ -50,6 +50,7 @@ def generate_video(config: VideoConfig) -> Path:
         width=config.width,
         height=config.height,
         fps=config.fps,
+        style=config.background_style,
     )
 
     # Step 3: Create caption clips

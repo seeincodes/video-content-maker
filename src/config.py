@@ -111,5 +111,7 @@ class VideoConfig:
     caption_color: str = CAPTION_COLOR
     caption_highlight_color: str = CAPTION_HIGHLIGHT_COLOR
     words_per_group: int = WORDS_PER_GROUP
+    scene_change_words: int = 15
+    crossfade_duration: float = 0.5
     watermark: str = ""
     extra_voices: list[str] = field(default_factory=list)

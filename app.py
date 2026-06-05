@@ -83,6 +83,8 @@ with st.sidebar:
 
     bg_style = DEFAULT_BACKGROUND_STYLE
     bg_file = None
+    scene_change_words = 15
+    crossfade_duration = 0.5
 
     if bg_mode == "procedural":
         bg_style = st.selectbox(
@@ -103,8 +105,23 @@ with st.sidebar:
     else:
         st.info(
             "🔍 Stock footage will be fetched from Pexels based on your text content. "
-            "Images will have a Ken Burns zoom/pan effect. "
+            "Visuals change per sentence to match the narration. "
             "Requires PEXELS_API_KEY environment variable."
+        )
+        scene_change_words = st.slider(
+            "Words per scene",
+            min_value=8,
+            max_value=30,
+            value=15,
+            help="How often the background visual changes. Lower = more frequent cuts.",
+        )
+        crossfade_duration = st.slider(
+            "Crossfade duration (seconds)",
+            min_value=0.0,
+            max_value=2.0,
+            value=0.5,
+            step=0.1,
+            help="Smooth transition between scenes. 0 = hard cut.",
         )
 
 # --- Main content ---
@@ -142,6 +159,8 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             use_stock_footage=(bg_mode == "stock_footage"),
             caption_style=caption_style,
             words_per_group=words_per_group,
+            scene_change_words=scene_change_words,
+            crossfade_duration=crossfade_duration,
         )
 
         with st.spinner("Generating your brainrot video... This may take a minute."):

@@ -6,9 +6,10 @@ from pathlib import Path
 import streamlit as st
 
 from src.backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
+from src.chunker import DEFAULT_CHUNK_WORDS, chunk_text
 from src.config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, VideoConfig
 from src.rewriter import DEFAULT_REWRITE_MODE, REWRITE_MODES
-from src.video import generate_video
+from src.video import generate_video, generate_video_series
 
 st.set_page_config(
     page_title="Brainrot Generator",
@@ -80,6 +81,24 @@ with st.sidebar:
             "Uses OpenAI if OPENAI_API_KEY is set; otherwise uses a local fallback."
         ),
     )
+
+    st.markdown("---")
+    st.markdown("### Chunking")
+
+    auto_chunk = st.checkbox(
+        "Auto-split into multiple clips",
+        value=False,
+        help="Split long text into ~30s clips. Each clip is generated separately.",
+    )
+    chunk_words = DEFAULT_CHUNK_WORDS
+    if auto_chunk:
+        chunk_words = st.slider(
+            "Words per clip",
+            min_value=40,
+            max_value=200,
+            value=DEFAULT_CHUNK_WORDS,
+            help="Target words per video clip (~2.5 words/sec speech rate).",
+        )
 
     st.markdown("---")
     st.markdown("### Background")
@@ -209,28 +228,47 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             progress = st.progress(0, text="Generating TTS audio...")
 
             try:
-                if config.use_stock_footage:
-                    progress.progress(10, text="Generating TTS audio...")
+                if auto_chunk and len(text.strip().split()) > chunk_words * 1.5:
+                    # Multi-clip mode
+                    chunks = chunk_text(text.strip(), target_words=chunk_words)
+                    st.info(f"Splitting into {len(chunks)} clips...")
+                    paths = generate_video_series(config, chunks)
+                    progress.progress(100, text="Done!")
+
+                    st.success(f"Generated {len(paths)} video clips!")
+                    for i, p in enumerate(paths, 1):
+                        st.markdown(f"**Part {i}/{len(paths)}**")
+                        video_bytes = Path(p).read_bytes()
+                        st.video(video_bytes)
+                        st.download_button(
+                            label=f"⬇️ Download Part {i}",
+                            data=video_bytes,
+                            file_name=f"brainrot_part{i:03d}.mp4",
+                            mime="video/mp4",
+                            key=f"download_{i}",
+                            use_container_width=True,
+                        )
                 else:
-                    progress.progress(20, text="Generating TTS audio...")
+                    # Single video mode
+                    if config.use_stock_footage:
+                        progress.progress(10, text="Generating TTS audio...")
+                    else:
+                        progress.progress(20, text="Generating TTS audio...")
 
-                output_path = generate_video(config)
-                progress.progress(100, text="Done!")
+                    output_path = generate_video(config)
+                    progress.progress(100, text="Done!")
 
-                st.success("Video generated!")
+                    st.success("Video generated!")
+                    video_bytes = Path(output_path).read_bytes()
+                    st.video(video_bytes)
 
-                # Display the video
-                video_bytes = Path(output_path).read_bytes()
-                st.video(video_bytes)
-
-                # Download button
-                st.download_button(
-                    label="⬇️ Download Video",
-                    data=video_bytes,
-                    file_name="brainrot_output.mp4",
-                    mime="video/mp4",
-                    use_container_width=True,
-                )
+                    st.download_button(
+                        label="⬇️ Download Video",
+                        data=video_bytes,
+                        file_name="brainrot_output.mp4",
+                        mime="video/mp4",
+                        use_container_width=True,
+                    )
 
             except Exception as e:
                 st.error(f"Error generating video: {e}")

@@ -119,3 +119,29 @@ def generate_video(config: VideoConfig) -> Path:
         tts_result.audio_path.unlink(missing_ok=True)
 
     return output_path
+
+
+def generate_video_series(config: VideoConfig, chunks: list[str]) -> list[Path]:
+    """Generate a series of short videos from text chunks.
+
+    Args:
+        config: Base video config (text field is overridden per chunk).
+        chunks: List of text chunks, each becoming one video.
+
+    Returns:
+        List of output file paths.
+    """
+    from dataclasses import replace
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_paths: list[Path] = []
+
+    for i, chunk in enumerate(chunks, 1):
+        part_path = OUTPUT_DIR / f"brainrot_part{i:03d}.mp4"
+        chunk_config = replace(config, text=chunk, output_path=str(part_path))
+        logger.info("Generating part %d/%d (%d words)...", i, len(chunks), len(chunk.split()))
+        path = generate_video(chunk_config)
+        output_paths.append(path)
+        logger.info("Part %d/%d complete: %s", i, len(chunks), path)
+
+    return output_paths

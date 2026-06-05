@@ -409,11 +409,49 @@ def render_caption_frame(
     return renderer(width, height, group, current_time, style, font_path)
 
 
+def _prerender_group_frames(
+    width: int,
+    height: int,
+    group: WordGroup,
+    style_name: str,
+    font_path: str | None,
+) -> list[tuple[float, float, np.ndarray]]:
+    """Pre-render all distinct frames for a word group.
+
+    Instead of rendering per video frame (30fps), renders once per word transition.
+    Returns list of (relative_start, relative_end, rgba_frame) tuples.
+    """
+    frames: list[tuple[float, float, np.ndarray]] = []
+    group_start = group.start_s
+
+    for word in group.words:
+        # Render at the midpoint of each word's duration
+        word_mid = (word.start_s + word.end_s) / 2.0
+        frame = render_caption_frame(
+            width=width,
+            height=height,
+            group=group,
+            current_time=word_mid,
+            style_name=style_name,
+            font_path=font_path,
+        )
+        rel_start = word.start_s - group_start
+        rel_end = word.end_s - group_start
+        frames.append((rel_start, rel_end, frame))
+
+    return frames
+
+
 def create_caption_clips(
     word_timings: list[WordTiming],
     config: VideoConfig,
 ) -> list[VideoClip]:
-    """Create moviepy clips for animated captions."""
+    """Create moviepy clips for animated captions.
+
+    Uses frame caching: pre-renders one frame per word state instead of
+    re-rendering every video frame. This reduces PIL render calls from
+    (30fps × duration) to just (num_words) per group.
+    """
     style_name = config.caption_style
     style = CAPTION_STYLES.get(style_name, CAPTION_STYLES["classic"])
     words_per_group = style.get("words_per_group", config.words_per_group)
@@ -427,39 +465,38 @@ def create_caption_clips(
         if duration <= 0:
             continue
 
-        def make_frame_func(grp: WordGroup, fp: str | None, sn: str):
+        # Pre-render all word states for this group
+        cached_frames = _prerender_group_frames(
+            config.width, config.height, group, style_name, font_path
+        )
+
+        def make_frame_func(frames: list[tuple[float, float, np.ndarray]]):
             def make_frame(t):
-                current_time = grp.start_s + t
-                frame = render_caption_frame(
-                    width=config.width,
-                    height=config.height,
-                    group=grp,
-                    current_time=current_time,
-                    style_name=sn,
-                    font_path=fp,
-                )
-                return frame[:, :, :3]
+                # Find the cached frame for this time
+                for rel_start, rel_end, frame in frames:
+                    if rel_start <= t < rel_end:
+                        return frame[:, :, :3]
+                # Fallback to last frame
+                if frames:
+                    return frames[-1][2][:, :, :3]
+                return np.zeros((1, 1, 3), dtype=np.uint8)
 
             return make_frame
 
-        def make_mask_func(grp: WordGroup, fp: str | None, sn: str):
+        def make_mask_func(frames: list[tuple[float, float, np.ndarray]]):
             def make_mask(t):
-                current_time = grp.start_s + t
-                frame = render_caption_frame(
-                    width=config.width,
-                    height=config.height,
-                    group=grp,
-                    current_time=current_time,
-                    style_name=sn,
-                    font_path=fp,
-                )
-                return frame[:, :, 3] / 255.0
+                for rel_start, rel_end, frame in frames:
+                    if rel_start <= t < rel_end:
+                        return frame[:, :, 3] / 255.0
+                if frames:
+                    return frames[-1][2][:, :, 3] / 255.0
+                return np.zeros((1, 1), dtype=np.float64)
 
             return make_mask
 
-        clip = VideoClip(make_frame_func(group, font_path, style_name), duration=duration)
+        clip = VideoClip(make_frame_func(cached_frames), duration=duration)
         mask = VideoClip(
-            make_mask_func(group, font_path, style_name),
+            make_mask_func(cached_frames),
             is_mask=True,
             duration=duration,
         )

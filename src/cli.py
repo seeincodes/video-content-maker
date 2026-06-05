@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from .backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
-from .config import DEFAULT_RATE, DEFAULT_VOICE, VideoConfig
+from .config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, DEFAULT_RATE, DEFAULT_VOICE, VideoConfig
 from .video import generate_video
 
 
@@ -30,11 +30,15 @@ Examples:
   # Use stock footage from Pexels (requires PEXELS_API_KEY env var)
   brainrot "Photosynthesis converts sunlight into energy" --stock-footage
 
+  # Use a specific caption style
+  brainrot "Hello world" --caption-style hormozi
+
   # Use a custom background video
   brainrot "Hello world" --background gameplay.mp4
 
-  # List available background styles
+  # List available background/caption styles
   brainrot --list-styles
+  brainrot --list-caption-styles
         """,
     )
 
@@ -87,10 +91,17 @@ Examples:
         "Requires PEXELS_API_KEY environment variable.",
     )
     parser.add_argument(
+        "--caption-style", "-c",
+        type=str,
+        default=DEFAULT_CAPTION_STYLE,
+        choices=list(CAPTION_STYLES.keys()),
+        help="Caption rendering style (default: %(default)s).",
+    )
+    parser.add_argument(
         "--words-per-group", "-w",
         type=int,
-        default=4,
-        help="Number of words to show at once in captions (default: 4).",
+        default=None,
+        help="Number of words to show at once in captions (default: set by caption style).",
     )
     parser.add_argument(
         "--list-voices",
@@ -102,6 +113,11 @@ Examples:
         action="store_true",
         help="List available background styles and exit.",
     )
+    parser.add_argument(
+        "--list-caption-styles",
+        action="store_true",
+        help="List available caption style presets and exit.",
+    )
 
     args = parser.parse_args()
 
@@ -111,6 +127,10 @@ Examples:
 
     if args.list_styles:
         _list_styles()
+        return
+
+    if args.list_caption_styles:
+        _list_caption_styles()
         return
 
     # Get text from argument or file
@@ -127,6 +147,11 @@ Examples:
         parser.print_help()
         sys.exit(1)
 
+    # Resolve words_per_group: explicit flag > style default
+    words_per_group = args.words_per_group
+    if words_per_group is None:
+        words_per_group = CAPTION_STYLES[args.caption_style]["words_per_group"]
+
     config = VideoConfig(
         text=text,
         voice=args.voice,
@@ -134,13 +159,15 @@ Examples:
         background_video=args.background,
         background_style=args.background_style,
         use_stock_footage=args.stock_footage,
+        caption_style=args.caption_style,
         output_path=args.output,
-        words_per_group=args.words_per_group,
+        words_per_group=words_per_group,
     )
 
     print("🎬 Generating brainrot video...")
     print(f"   Voice: {config.voice}")
     print(f"   Rate: {config.rate}")
+    print(f"   Caption style: {config.caption_style}")
     if config.use_stock_footage:
         print("   Background: Stock footage from Pexels")
     else:
@@ -173,6 +200,14 @@ def _list_styles():
     for name, description in BACKGROUND_STYLES.items():
         default = " (default)" if name == DEFAULT_BACKGROUND_STYLE else ""
         print(f"  {name:<15} {description}{default}")
+
+
+def _list_caption_styles():
+    """Print available caption style presets."""
+    print(f"Available caption styles ({len(CAPTION_STYLES)} total):\n")
+    for name, style in CAPTION_STYLES.items():
+        default = " (default)" if name == DEFAULT_CAPTION_STYLE else ""
+        print(f"  {name:<15} {style['description']}{default}")
 
 
 if __name__ == "__main__":

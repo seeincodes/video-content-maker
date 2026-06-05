@@ -5,9 +5,10 @@ import sys
 from pathlib import Path
 
 from .backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
+from .chunker import DEFAULT_CHUNK_WORDS, chunk_text
 from .config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, DEFAULT_RATE, DEFAULT_VOICE, VideoConfig
 from .rewriter import DEFAULT_REWRITE_MODE, REWRITE_MODES
-from .video import generate_video
+from .video import generate_video, generate_video_series
 
 
 def main():
@@ -57,6 +58,18 @@ Examples:
         "--url", "-u",
         type=str,
         help="Import text from a URL (extracts article content automatically).",
+    )
+    parser.add_argument(
+        "--chunk",
+        action="store_true",
+        default=False,
+        help="Auto-split long text into multiple short clips (~30s each).",
+    )
+    parser.add_argument(
+        "--chunk-words",
+        type=int,
+        default=DEFAULT_CHUNK_WORDS,
+        help=f"Target words per chunk (default: {DEFAULT_CHUNK_WORDS}, ~30s of speech).",
     )
     parser.add_argument(
         "--output", "-o",
@@ -203,10 +216,20 @@ Examples:
         print(f"   Background: {config.background_style}")
     print(f"   Words per group: {config.words_per_group}")
     print(f"   Text: {text[:80]}{'...' if len(text) > 80 else ''}")
-    print()
 
-    output_path = generate_video(config)
-    print(f"\n✅ Video saved to: {output_path}")
+    # Auto-chunking for long text
+    if args.chunk:
+        chunks = chunk_text(text, target_words=args.chunk_words)
+        print(f"   Chunking: {len(chunks)} parts (~{args.chunk_words} words each)")
+        print()
+        paths = generate_video_series(config, chunks)
+        print(f"\n✅ Generated {len(paths)} videos:")
+        for p in paths:
+            print(f"   {p}")
+    else:
+        print()
+        output_path = generate_video(config)
+        print(f"\n✅ Video saved to: {output_path}")
 
 
 def _list_voices():

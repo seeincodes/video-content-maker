@@ -113,5 +113,6 @@ class VideoConfig:
     words_per_group: int = WORDS_PER_GROUP
     scene_change_words: int = 15
     crossfade_duration: float = 0.5
+    rewrite_mode: str = "none"
     watermark: str = ""
     extra_voices: list[str] = field(default_factory=list)

@@ -103,14 +103,14 @@ def generate_video(config: VideoConfig) -> Path:
     final = final.with_duration(total_duration)
     final = final.with_audio(audio)
 
-    # Render
+    # Render (using 'fast' preset + max threads for speed)
     final.write_videofile(
         str(output_path),
         fps=config.fps,
         codec="libx264",
         audio_codec="aac",
-        preset="medium",
-        threads=4,
+        preset="fast",
+        threads=0,
         logger="bar",
     )
 

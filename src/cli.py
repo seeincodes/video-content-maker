@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
 from .config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, DEFAULT_RATE, DEFAULT_VOICE, VideoConfig
+from .music import DEFAULT_MUSIC_PRESET, MUSIC_PRESETS
 from .video import generate_video
 
 
@@ -98,6 +99,13 @@ Examples:
         help="Caption rendering style (default: %(default)s).",
     )
     parser.add_argument(
+        "--music", "-m",
+        type=str,
+        default=DEFAULT_MUSIC_PRESET,
+        choices=list(MUSIC_PRESETS.keys()),
+        help="Background music preset with auto-ducking (default: %(default)s).",
+    )
+    parser.add_argument(
         "--words-per-group", "-w",
         type=int,
         default=None,
@@ -118,6 +126,11 @@ Examples:
         action="store_true",
         help="List available caption style presets and exit.",
     )
+    parser.add_argument(
+        "--list-music",
+        action="store_true",
+        help="List available background music presets and exit.",
+    )
 
     args = parser.parse_args()
 
@@ -131,6 +144,10 @@ Examples:
 
     if args.list_caption_styles:
         _list_caption_styles()
+        return
+
+    if args.list_music:
+        _list_music()
         return
 
     # Get text from argument or file
@@ -160,6 +177,7 @@ Examples:
         background_style=args.background_style,
         use_stock_footage=args.stock_footage,
         caption_style=args.caption_style,
+        music_preset=args.music,
         output_path=args.output,
         words_per_group=words_per_group,
     )
@@ -168,6 +186,7 @@ Examples:
     print(f"   Voice: {config.voice}")
     print(f"   Rate: {config.rate}")
     print(f"   Caption style: {config.caption_style}")
+    print(f"   Music: {config.music_preset}")
     if config.use_stock_footage:
         print("   Background: Stock footage from Pexels")
     else:
@@ -208,6 +227,14 @@ def _list_caption_styles():
     for name, style in CAPTION_STYLES.items():
         default = " (default)" if name == DEFAULT_CAPTION_STYLE else ""
         print(f"  {name:<15} {style['description']}{default}")
+
+
+def _list_music():
+    """Print available background music presets."""
+    print(f"Available music presets ({len(MUSIC_PRESETS)} total):\n")
+    for name, description in MUSIC_PRESETS.items():
+        default = " (default)" if name == DEFAULT_MUSIC_PRESET else ""
+        print(f"  {name:<15} {description}{default}")
 
 
 if __name__ == "__main__":

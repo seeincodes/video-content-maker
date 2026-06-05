@@ -6,11 +6,12 @@ import logging
 import tempfile
 from pathlib import Path
 
-from moviepy import AudioFileClip, CompositeVideoClip
+from moviepy import AudioFileClip, CompositeAudioClip, CompositeVideoClip
 
 from .backgrounds import load_background
 from .captions import create_caption_clips
 from .config import OUTPUT_DIR, VideoConfig
+from .music import create_music_audio_clip
 from .tts import run_tts
 
 logger = logging.getLogger(__name__)
@@ -87,11 +88,22 @@ def generate_video(config: VideoConfig) -> Path:
     # Step 3: Create caption clips
     caption_clips = create_caption_clips(tts_result.word_timings, config)
 
-    # Step 4: Composite
+    # Step 4: Mix audio (TTS + background music with auto-ducking)
+    music_clip = create_music_audio_clip(
+        preset=config.music_preset,
+        duration=total_duration,
+        word_timings=tts_result.word_timings,
+    )
+    if music_clip is not None:
+        mixed_audio = CompositeAudioClip([audio, music_clip])
+    else:
+        mixed_audio = audio
+
+    # Step 5: Composite video
     all_clips = [background] + caption_clips
     final = CompositeVideoClip(all_clips, size=(config.width, config.height))
     final = final.with_duration(total_duration)
-    final = final.with_audio(audio)
+    final = final.with_audio(mixed_audio)
 
     # Render
     final.write_videofile(

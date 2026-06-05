@@ -54,6 +54,11 @@ Examples:
         help="Read text from a file instead of inline argument.",
     )
     parser.add_argument(
+        "--url", "-u",
+        type=str,
+        help="Import text from a URL (extracts article content automatically).",
+    )
+    parser.add_argument(
         "--output", "-o",
         type=str,
         default=None,
@@ -142,9 +147,18 @@ Examples:
         _list_caption_styles()
         return
 
-    # Get text from argument or file
+    # Get text from argument, file, or URL
     text = args.text
-    if args.file:
+    if args.url:
+        from .url_import import extract_text_from_url
+
+        try:
+            text = extract_text_from_url(args.url)
+            print(f"📥 Extracted {len(text.split())} words from URL")
+        except Exception as e:
+            print(f"Error: Failed to extract text from URL: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.file:
         file_path = Path(args.file)
         if not file_path.exists():
             print(f"Error: File not found: {args.file}", file=sys.stderr)
@@ -152,7 +166,10 @@ Examples:
         text = file_path.read_text(encoding="utf-8").strip()
 
     if not text:
-        print("Error: No text provided. Use positional arg or --file.", file=sys.stderr)
+        print(
+            "Error: No text provided. Use positional arg, --file, or --url.",
+            file=sys.stderr,
+        )
         parser.print_help()
         sys.exit(1)
 

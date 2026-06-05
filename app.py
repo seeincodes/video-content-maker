@@ -7,6 +7,7 @@ import streamlit as st
 
 from src.backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
 from src.config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, VideoConfig
+from src.rewriter import DEFAULT_REWRITE_MODE, REWRITE_MODES
 from src.video import generate_video
 
 st.set_page_config(
@@ -64,6 +65,20 @@ with st.sidebar:
         max_value=8,
         value=CAPTION_STYLES[caption_style]["words_per_group"],
         help="How many words appear on screen at once. Auto-set by style preset.",
+    )
+
+    st.markdown("---")
+    st.markdown("### Script Rewriter")
+
+    rewrite_mode = st.selectbox(
+        "Rewrite Style",
+        options=list(REWRITE_MODES.keys()),
+        index=list(REWRITE_MODES.keys()).index(DEFAULT_REWRITE_MODE),
+        format_func=lambda k: f"{k.replace('_', ' ').title()} — {REWRITE_MODES[k]}",
+        help=(
+            "Rewrite your text into a more engaging narration style before generating. "
+            "Uses OpenAI if OPENAI_API_KEY is set; otherwise uses a local fallback."
+        ),
     )
 
     st.markdown("---")
@@ -161,6 +176,7 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             words_per_group=words_per_group,
             scene_change_words=scene_change_words,
             crossfade_duration=crossfade_duration,
+            rewrite_mode=rewrite_mode,
         )
 
         with st.spinner("Generating your brainrot video... This may take a minute."):

@@ -11,6 +11,7 @@ from moviepy import AudioFileClip, CompositeVideoClip
 from .backgrounds import load_background
 from .captions import create_caption_clips
 from .config import OUTPUT_DIR, VideoConfig
+from .rewriter import rewrite_script
 from .tts import run_tts
 
 logger = logging.getLogger(__name__)
@@ -27,9 +28,16 @@ def generate_video(config: VideoConfig) -> Path:
     """
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Step 0: Rewrite script if requested
+    narration_text = config.text
+    if config.rewrite_mode != "none":
+        logger.info("Rewriting script in '%s' mode...", config.rewrite_mode)
+        narration_text = rewrite_script(config.text, config.rewrite_mode)
+        logger.info("Rewritten text (%d words)", len(narration_text.split()))
+
     # Step 1: Generate TTS
     tts_result = run_tts(
-        text=config.text,
+        text=narration_text,
         voice=config.voice,
         rate=config.rate,
         volume=config.volume,

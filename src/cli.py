@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
 from .config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, DEFAULT_RATE, DEFAULT_VOICE, VideoConfig
+from .rewriter import DEFAULT_REWRITE_MODE, REWRITE_MODES
 from .video import generate_video
 
 
@@ -98,6 +99,14 @@ Examples:
         help="Caption rendering style (default: %(default)s).",
     )
     parser.add_argument(
+        "--rewrite",
+        type=str,
+        default=DEFAULT_REWRITE_MODE,
+        choices=list(REWRITE_MODES.keys()),
+        help="Rewrite text into a narration style before generating (default: %(default)s). "
+        "Uses OpenAI API if OPENAI_API_KEY is set; otherwise local fallback.",
+    )
+    parser.add_argument(
         "--words-per-group", "-w",
         type=int,
         default=None,
@@ -160,6 +169,7 @@ Examples:
         background_style=args.background_style,
         use_stock_footage=args.stock_footage,
         caption_style=args.caption_style,
+        rewrite_mode=args.rewrite,
         output_path=args.output,
         words_per_group=words_per_group,
     )
@@ -168,6 +178,8 @@ Examples:
     print(f"   Voice: {config.voice}")
     print(f"   Rate: {config.rate}")
     print(f"   Caption style: {config.caption_style}")
+    if config.rewrite_mode != "none":
+        print(f"   Rewrite: {config.rewrite_mode}")
     if config.use_stock_footage:
         print("   Background: Stock footage from Pexels")
     else:

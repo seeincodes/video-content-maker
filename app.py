@@ -7,6 +7,7 @@ import streamlit as st
 
 from src.backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
 from src.config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, VideoConfig
+from src.music import DEFAULT_MUSIC_PRESET, MUSIC_PRESETS
 from src.video import generate_video
 
 st.set_page_config(
@@ -107,6 +108,20 @@ with st.sidebar:
             "Requires PEXELS_API_KEY environment variable."
         )
 
+    st.markdown("---")
+    st.markdown("### Music")
+
+    music_preset = st.selectbox(
+        "Background Music",
+        options=list(MUSIC_PRESETS.keys()),
+        index=list(MUSIC_PRESETS.keys()).index(DEFAULT_MUSIC_PRESET),
+        format_func=lambda k: (
+            f"🔇 {MUSIC_PRESETS[k]}" if k == "none"
+            else f"🎵 {k.replace('_', ' ').title()} — {MUSIC_PRESETS[k]}"
+        ),
+        help="Background music auto-ducks (lowers volume) when narration is playing.",
+    )
+
 # --- Main content ---
 text = st.text_area(
     "Enter your text",
@@ -142,6 +157,7 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             use_stock_footage=(bg_mode == "stock_footage"),
             caption_style=caption_style,
             words_per_group=words_per_group,
+            music_preset=music_preset,
         )
 
         with st.spinner("Generating your brainrot video... This may take a minute."):

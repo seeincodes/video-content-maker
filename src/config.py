@@ -111,5 +111,6 @@ class VideoConfig:
     caption_color: str = CAPTION_COLOR
     caption_highlight_color: str = CAPTION_HIGHLIGHT_COLOR
     words_per_group: int = WORDS_PER_GROUP
+    music_preset: str = "lofi_chill"
     watermark: str = ""
     extra_voices: list[str] = field(default_factory=list)

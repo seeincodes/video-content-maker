@@ -140,16 +140,42 @@ with st.sidebar:
         )
 
 # --- Main content ---
-text = st.text_area(
-    "Enter your text",
-    height=200,
-    placeholder=(
-        "Paste the informative text you want to turn into a brainrot video.\n\n"
-        "Example: The mitochondria is the powerhouse of the cell. "
-        "It generates most of the cell's supply of adenosine triphosphate, "
-        "used as a source of chemical energy..."
-    ),
+input_mode = st.radio(
+    "Input source",
+    options=["text", "url"],
+    format_func=lambda x: "📝 Paste text" if x == "text" else "🔗 Import from URL",
+    horizontal=True,
 )
+
+text = ""
+if input_mode == "text":
+    text = st.text_area(
+        "Enter your text",
+        height=200,
+        placeholder=(
+            "Paste the informative text you want to turn into a brainrot video.\n\n"
+            "Example: The mitochondria is the powerhouse of the cell. "
+            "It generates most of the cell's supply of adenosine triphosphate, "
+            "used as a source of chemical energy..."
+        ),
+    )
+else:
+    url_input = st.text_input(
+        "Article URL",
+        placeholder="https://en.wikipedia.org/wiki/Photosynthesis",
+        help="Paste a URL and we'll extract the article text automatically.",
+    )
+    if url_input:
+        from src.url_import import extract_text_from_url
+
+        try:
+            with st.spinner("Extracting text from URL..."):
+                text = extract_text_from_url(url_input)
+            st.success(f"Extracted {len(text.split())} words from the article.")
+            with st.expander("Preview extracted text"):
+                st.write(text[:1000] + ("..." if len(text) > 1000 else ""))
+        except Exception as e:
+            st.error(f"Failed to extract text: {e}")
 
 if st.button("🎬 Generate Video", type="primary", use_container_width=True):
     if not text.strip():

@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 
 from src.backgrounds import BACKGROUND_STYLES, DEFAULT_BACKGROUND_STYLE
-from src.config import VideoConfig
+from src.config import CAPTION_STYLES, DEFAULT_CAPTION_STYLE, VideoConfig
 from src.video import generate_video
 
 st.set_page_config(
@@ -47,12 +47,23 @@ with st.sidebar:
         help="Faster = more brainrot energy.",
     )
 
+    st.markdown("---")
+    st.markdown("### Caption Style")
+
+    caption_style = st.selectbox(
+        "Caption Preset",
+        options=list(CAPTION_STYLES.keys()),
+        index=list(CAPTION_STYLES.keys()).index(DEFAULT_CAPTION_STYLE),
+        format_func=lambda k: f"{k.replace('_', ' ').title()} — {CAPTION_STYLES[k]['description']}",
+        help="Choose how captions are rendered on the video.",
+    )
+
     words_per_group = st.slider(
         "Words per caption group",
-        min_value=2,
+        min_value=1,
         max_value=8,
-        value=4,
-        help="How many words appear on screen at once.",
+        value=CAPTION_STYLES[caption_style]["words_per_group"],
+        help="How many words appear on screen at once. Auto-set by style preset.",
     )
 
     st.markdown("---")
@@ -129,6 +140,7 @@ if st.button("🎬 Generate Video", type="primary", use_container_width=True):
             background_video=bg_path,
             background_style=bg_style,
             use_stock_footage=(bg_mode == "stock_footage"),
+            caption_style=caption_style,
             words_per_group=words_per_group,
         )
 

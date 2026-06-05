@@ -64,6 +64,8 @@ def generate_video(config: VideoConfig) -> Path:
                 width=config.width,
                 height=config.height,
                 fps=config.fps,
+                words_per_scene=config.scene_change_words,
+                crossfade_duration=config.crossfade_duration,
             )
             if background is None:
                 logger.warning(

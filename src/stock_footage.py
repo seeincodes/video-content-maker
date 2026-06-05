@@ -342,6 +342,65 @@ def _resize_clip(clip: VideoFileClip, width: int, height: int) -> VideoFileClip:
     return clip
 
 
+def _split_into_sentences(word_timings: list, max_words: int = 20) -> list[dict]:
+    """Split word timings into sentence-based segments.
+
+    Uses punctuation cues (periods, question marks, exclamation) to find sentence
+    boundaries. Falls back to splitting by max_words if sentences are too long.
+    """
+    segments: list[dict] = []
+    current_words: list = []
+
+    sentence_enders = {".", "!", "?", "...", "—"}
+
+    for word in word_timings:
+        current_words.append(word)
+        text = word.word.strip()
+        ends_sentence = any(text.endswith(p) for p in sentence_enders)
+        at_max = len(current_words) >= max_words
+
+        if ends_sentence or at_max:
+            seg_text = " ".join(w.word for w in current_words)
+            segments.append({
+                "text": seg_text,
+                "start_s": current_words[0].start_s,
+                "end_s": current_words[-1].end_s,
+            })
+            current_words = []
+
+    # Remaining words
+    if current_words:
+        seg_text = " ".join(w.word for w in current_words)
+        segments.append({
+            "text": seg_text,
+            "start_s": current_words[0].start_s,
+            "end_s": current_words[-1].end_s,
+        })
+
+    return segments
+
+
+def _merge_short_segments(
+    segments: list[dict], min_duration: float = 3.0
+) -> list[dict]:
+    """Merge segments that are too short for a meaningful visual change."""
+    if not segments:
+        return segments
+
+    merged: list[dict] = [segments[0]]
+    for seg in segments[1:]:
+        prev = merged[-1]
+        prev_duration = prev["end_s"] - prev["start_s"]
+        if prev_duration < min_duration:
+            # Merge with previous
+            prev["text"] = prev["text"] + " " + seg["text"]
+            prev["end_s"] = seg["end_s"]
+        else:
+            merged.append(seg)
+
+    return merged
+
+
 def build_stock_footage_background(
     text: str,
     word_timings: list,
@@ -351,11 +410,12 @@ def build_stock_footage_background(
     height: int = VIDEO_HEIGHT,
     fps: int = 30,
     words_per_scene: int = 15,
+    crossfade_duration: float = 0.5,
 ) -> object | None:
     """Build a composite background from stock footage matching text content.
 
-    Splits the narration into scenes, fetches relevant footage for each,
-    and concatenates them into a single background clip.
+    Splits narration into sentence-based scenes, fetches relevant footage for each,
+    and concatenates with crossfade transitions.
 
     Args:
         text: The full narration text.
@@ -365,7 +425,8 @@ def build_stock_footage_background(
         width: Video width.
         height: Video height.
         fps: Frames per second.
-        words_per_scene: How many words per scene/segment.
+        words_per_scene: Max words per scene (used as upper bound).
+        crossfade_duration: Duration of crossfade between scenes in seconds.
 
     Returns:
         A VideoClip composited from stock footage, or None if no footage found.
@@ -373,40 +434,38 @@ def build_stock_footage_background(
     if not word_timings:
         return None
 
-    # Split word timings into scenes
-    segments = []
-    for i in range(0, len(word_timings), words_per_scene):
-        chunk = word_timings[i : i + words_per_scene]
-        if not chunk:
-            continue
-        seg_text = " ".join(w.word for w in chunk)
-        segments.append({
-            "text": seg_text,
-            "start_s": chunk[0].start_s,
-            "end_s": chunk[-1].end_s,
-        })
+    # Split into sentence-based segments
+    segments = _split_into_sentences(word_timings, max_words=words_per_scene)
+
+    # Merge very short segments (< 3s) to avoid jarring rapid cuts
+    segments = _merge_short_segments(segments, min_duration=3.0)
 
     # Extend last segment to cover full duration
     if segments:
         segments[-1]["end_s"] = duration
 
-    logger.info("Split text into %d scenes for stock footage", len(segments))
+    logger.info(
+        "Split text into %d scenes for stock footage (sentence-based)", len(segments)
+    )
 
     results = fetch_stock_footage_clips(segments, api_key, width, height, fps)
 
     if not results:
         return None
 
-    # Concatenate all clips
+    # Concatenate all clips with crossfade transitions
     all_clips = [clip for _, clip in results]
     if len(all_clips) == 1:
         final = all_clips[0]
+    elif crossfade_duration > 0 and len(all_clips) > 1:
+        final = concatenate_videoclips(
+            all_clips, method="compose", padding=-crossfade_duration
+        )
     else:
         final = concatenate_videoclips(all_clips)
 
     # Ensure it covers the full duration
     if final.duration < duration:
-        # Loop last clip to fill
         gap = duration - final.duration
         last_clip = all_clips[-1]
         if last_clip.duration > 0:

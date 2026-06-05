@@ -41,6 +41,7 @@ class VideoConfig:
     volume: str = DEFAULT_VOLUME
     background_video: str | None = None
     background_style: str = "purple_grid"
+    use_stock_footage: bool = False
     output_path: str | None = None
     width: int = VIDEO_WIDTH
     height: int = VIDEO_HEIGHT

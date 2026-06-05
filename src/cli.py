@@ -22,10 +22,13 @@ Examples:
   brainrot --file notes.txt
 
   # Customize voice and speed
-  brainrot "Hello world" --voice en-US-AriaNeural --rate "+20%"
+  brainrot "Hello world" --voice en-US-AriaNeural --rate "+20%%"
 
   # Use a specific background style
   brainrot "Hello world" --background-style matrix
+
+  # Use stock footage from Pexels (requires PEXELS_API_KEY env var)
+  brainrot "Photosynthesis converts sunlight into energy" --stock-footage
 
   # Use a custom background video
   brainrot "Hello world" --background gameplay.mp4
@@ -77,6 +80,13 @@ Examples:
         help="Procedural background style (default: %(default)s).",
     )
     parser.add_argument(
+        "--stock-footage",
+        action="store_true",
+        default=False,
+        help="Use Pexels stock footage matching the text content as background. "
+        "Requires PEXELS_API_KEY environment variable.",
+    )
+    parser.add_argument(
         "--words-per-group", "-w",
         type=int,
         default=4,
@@ -123,6 +133,7 @@ Examples:
         rate=args.rate,
         background_video=args.background,
         background_style=args.background_style,
+        use_stock_footage=args.stock_footage,
         output_path=args.output,
         words_per_group=args.words_per_group,
     )
@@ -130,7 +141,10 @@ Examples:
     print("🎬 Generating brainrot video...")
     print(f"   Voice: {config.voice}")
     print(f"   Rate: {config.rate}")
-    print(f"   Background: {config.background_style}")
+    if config.use_stock_footage:
+        print("   Background: Stock footage from Pexels")
+    else:
+        print(f"   Background: {config.background_style}")
     print(f"   Words per group: {config.words_per_group}")
     print(f"   Text: {text[:80]}{'...' if len(text) > 80 else ''}")
     print()
